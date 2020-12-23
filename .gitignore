@@ -1,0 +1,14 @@
+.idea/
+**/.bloop/
+jb.iml
+target/
+.vscode/
+.metals/
+.bloop/
+.classpath
+.history/
+.scalafmt.conf
+project/metals.sbt
+project/.bloop/
+project/target/
+project/project/

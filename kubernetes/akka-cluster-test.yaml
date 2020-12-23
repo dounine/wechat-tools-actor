@@ -1,0 +1,89 @@
+#deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: jbserver
+  name: jbserver
+  namespace: jb
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: jbserver
+  template:
+    metadata:
+      labels:
+        app: jbserver
+        actorSystemName: jbserver
+    spec:
+      containers:
+        - name: jbserver
+          image: registry.cn-hangzhou.aliyuncs.com/xinghan-docker/jbserver:latest
+          imagePullPolicy: Never
+          livenessProbe:
+            httpGet:
+              path: /alive
+              port: management
+            periodSeconds: 10
+            failureThreshold: 5
+            initialDelaySeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: management
+            periodSeconds: 10
+            failureThreshold: 3
+            initialDelaySeconds: 10
+          ports:
+            - name: http
+              containerPort: 30000
+              protocol: TCP
+            - name: remote
+              containerPort: 25520
+              protocol: TCP
+            - name: management
+              containerPort: 8558
+              protocol: TCP
+          env:
+          - name: REQUIRED_CONTACT_POINT_NR
+            value: "3"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jbserver
+  namespace: jb
+spec:
+  selector:
+    app: jbserver
+  ports:
+  - name: http
+    port: 30000
+    nodePort: 30000
+    protocol: TCP
+    targetPort: http
+  type: NodePort
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: pod-reader
+  namespace: jb
+rules:
+  - apiGroups: [""] # "" indicates the core API group
+    resources: ["pods"]
+    verbs: ["get", "watch", "list"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: read-pods
+  namespace: jb
+subjects:
+  - kind: User
+    name: system:serviceaccount:jb:default
+roleRef:
+  kind: Role
+  name: pod-reader
+  apiGroup: rbac.authorization.k8s.io

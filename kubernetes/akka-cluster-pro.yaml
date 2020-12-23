@@ -1,0 +1,127 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: jbserver
+  name: jbserver
+  namespace: jb
+  annotations:
+    kubernetes.io/change-cause: "增加定单读取与用户信息读取断路器功能"
+spec:
+  revisionHistoryLimit: 10
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  selector:
+    matchLabels:
+      app: jbserver
+  template:
+    metadata:
+      labels:
+        app: jbserver
+        actorSystemName: jbserver
+      annotations:
+        k8s.aliyun.com/eci-use-specs: "ecs.c5.large"
+        k8s.aliyun.com/eci-spot-strategy: "SpotAsPriceGo"
+        k8s.aliyun.com/eci-with-eip: "true"
+    spec:
+      volumes:
+        - name: jb-pvc-nas
+          persistentVolumeClaim:
+            claimName: jb-pvc-nas
+        - name: workdir
+          emptyDir: {}
+      containers:
+        - name: jbserver
+          image: registry-vpc.cn-hangzhou.aliyuncs.com/xinghan-docker/jbserver:latest
+          livenessProbe:
+            httpGet:
+              path: /alive
+              port: management
+            periodSeconds: 10
+            failureThreshold: 5
+            initialDelaySeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: management
+            periodSeconds: 10
+            failureThreshold: 3
+            initialDelaySeconds: 10
+          ports:
+            - name: http
+              containerPort: 30000
+              protocol: TCP
+            - name: remote
+              containerPort: 25520
+              protocol: TCP
+            - name: proxy
+              containerPort: 30001
+              protocol: TCP
+            - name: management
+              containerPort: 8558
+              protocol: TCP
+          volumeMounts:
+            - name: jb-pvc-nas
+              mountPath: "/alllog"
+            - name: workdir
+              mountPath: "/root"
+          env:
+            - name: REQUIRED_CONTACT_POINT_NR
+              value: "3"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jbserver-service
+  namespace: jb
+spec:
+  selector:
+    app: jbserver
+  ports:
+    - name: http
+      port: 30000
+      protocol: TCP
+      targetPort: http
+  type: ClusterIP
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: jbserver-ingress
+  namespace: jb
+spec:
+  rules:
+    - host: jbserver.61week.com
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: jbserver-service
+              servicePort: 30000
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: pod-reader
+  namespace: jb
+rules:
+  - apiGroups: [""] # "" indicates the core API group
+    resources: ["pods"]
+    verbs: ["get", "watch", "list"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: read-pods
+  namespace: jb
+subjects:
+  - kind: User
+    name: system:serviceaccount:jb:default
+roleRef:
+  kind: Role
+  name: pod-reader
+  apiGroup: rbac.authorization.k8s.io
