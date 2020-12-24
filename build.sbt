@@ -45,7 +45,7 @@ lazy val app = (project in file("."))
       "org.json4s" %% "json4s-native" % json4sVersion,
       "org.json4s" %% "json4s-ext" % json4sVersion,
       "net.lightbody.bmp" % "browsermob-proxy" % "2.1.5" pomOnly (),
-      "org.seleniumhq.selenium" % "selenium-java" % "3.141.59",
+      "org.seleniumhq.selenium" % "selenium-java" % "4.0.0-alpha-7",
       "net.coobird" % "thumbnailator" % "0.4.13",
       "com.lightbend.akka.management" %% "akka-lease-kubernetes" % "1.0.9",
       "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.9",

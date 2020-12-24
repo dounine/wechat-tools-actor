@@ -2,6 +2,7 @@ package com.dounine.jb.behavior.platform.selenium
 
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
+
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, PreRestart, SupervisorStrategy}
 import akka.cluster.sharding.typed.scaladsl.EntityTypeKey
@@ -12,21 +13,30 @@ import akka.persistence.typed.scaladsl.{
 }
 import akka.persistence.typed._
 import com.dounine.jb.model.BaseSerializer
+
 import scala.concurrent.duration._
 import org.openqa.selenium.chrome.ChromeOptions
-import org.openqa.selenium.remote.CapabilityType
+import org.openqa.selenium.remote.{
+  CapabilityType,
+  Command,
+  RemoteExecuteMethod,
+  RemoteWebDriver
+}
 import com.dounine.jb.tools.json.BaseRouter
-import org.openqa.selenium.remote.RemoteWebDriver
 import java.net.URL
+
 import org.openqa.selenium.Dimension
 import org.openqa.selenium.By
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import java.io.File
+
 import org.openqa.selenium.OutputType
 import java.util.UUID
+
 import org.apache.commons.io.FileUtils
 import net.coobird.thumbnailator.Thumbnails
 import org.openqa.selenium.chrome.ChromeDriver
+
 import scala.jdk.CollectionConverters._
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpRequest
@@ -38,15 +48,17 @@ import akka.http.scaladsl.model.HttpResponse
 import akka.util.ByteString
 import akka.stream.SystemMaterializer
 import akka.stream.Materializer
+
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.Future
 import scala.util.Success
 import scala.util.Failure
 import akka.http.scaladsl.model.headers.RawHeader
 import com.dounine.jb.model.GoldModel
+
 import scala.concurrent.Await
-import org.openqa.selenium.remote.RemoteExecuteMethod
 import org.openqa.selenium.remote.html5.RemoteWebStorage
+import com.dounine.jb.behavior.selenium.CdpRemoteWebDriver
 
 object GoldBehavior extends BaseRouter {
 
@@ -112,7 +124,7 @@ object GoldBehavior extends BaseRouter {
         val goldId: String = persistenceId.id.split("\\|").last
         val timeout: Int = 50
         Behaviors.setup { context: ActorContext[Event] =>
-          var chromeDriver = Option.empty[RemoteWebDriver]
+          var chromeDriver = Option.empty[CdpRemoteWebDriver]
           implicit val materializer: Materializer =
             SystemMaterializer(context.system).materializer
           implicit val ec: ExecutionContextExecutor =
@@ -122,6 +134,17 @@ object GoldBehavior extends BaseRouter {
           val createChrome = (actor: ActorRef[BaseSerializer]) => {
             // chromeDriver = Option(new ChromeDriver())
             val chromeOptions: ChromeOptions = new ChromeOptions()
+            // chromeOptions.setExperimentalOption(
+            //   "excludeSwitches",
+            //   Array("enable-automation")
+            // )
+            // chromeOptions.setExperimentalOption("useAutomationExtension", false)
+            // chromeOptions.addEncodedExtensions(
+            //   List("excludeSwitches", "enable-automation").asJava
+            // )
+            //  chromeOptions.addEncodedExtensions(
+            //   List("useAutomationExtension", "false").asJava
+            // )
             val hubUrl: String = config.getString("model") match {
               case "pro"   => "http://chrome:4444/wd/hub"
               case "stage" => config.getString("selenium.remoteUrl")
@@ -129,7 +152,21 @@ object GoldBehavior extends BaseRouter {
               case _       => config.getString("selenium.remoteUrl")
             }
             chromeDriver =
-              Option(new RemoteWebDriver(new URL(hubUrl), chromeOptions))
+              Option(new CdpRemoteWebDriver(new URL(hubUrl), chromeOptions))
+
+            val file =
+              new File(
+                GoldBehavior.getClass.getResource("/stealth.min.js").getPath()
+              )
+            val params: Map[String, Object] = Map(
+              "source" -> FileUtils.readFileToString(file, "utf-8")
+            )
+
+            chromeDriver.get.executeCdpCommand(
+              "Page.addScriptToEvaluateOnNewDocument",
+              params
+            )
+
             chromeDriver.get
               .manage()
               .timeouts()
@@ -146,45 +183,49 @@ object GoldBehavior extends BaseRouter {
                   config.getInt("selenium.size.height")
                 )
               )
-            chromeDriver.get.get("https://mp.weixin.qq.com/")
+            chromeDriver.get.get("https://mp.weixin.qq.com")
 
             TimeUnit.SECONDS.sleep(1)
 
-            val screenFile: File =
-              chromeDriver.get.getScreenshotAs(OutputType.FILE)
-            val screenPath: String =
-              config.getString("qrcodePath") + s"""/${UUID
-                .randomUUID()
-                .toString
-                .replaceAll("-", "")}.png"""
-            FileUtils.copyFile(screenFile, new File(screenPath))
-            context.log.info("screen " + screenPath)
+            val qrcodeFile = chromeDriver.get
+              .findElement(By.className("login__type__container__scan__qrcode"))
+              .getScreenshotAs(OutputType.FILE)
 
-            val region1: Int = 637
-            val region2: Int = 177
-            val region3: Int = 112
-            val region4: Int = 112
-            val sizeWith: Int = 124
-            val sizeHeight: Int = 124
-            val qrcodePath: String =
-              config.getString("qrcodePath") + s"""/${UUID
-                .randomUUID()
-                .toString
-                .replaceAll("-", "")}.png"""
+            // val screenFile: File =
+            //   chromeDriver.get.getScreenshotAs(OutputType.FILE)
+            // val screenPath: String =
+            //   config.getString("qrcodePath") + s"""/${UUID
+            //     .randomUUID()
+            //     .toString
+            //     .replaceAll("-", "")}.png"""
+            // FileUtils.copyFile(screenFile, new File(screenPath))
+            // context.log.info("screen " + screenPath)
 
-            Thumbnails
-              .of(screenPath)
-              .sourceRegion(region1, region2, region3, region4)
-              .size(sizeWith, sizeHeight)
-              .keepAspectRatio(true)
-              .toFile(qrcodePath)
+            // val region1: Int = 637
+            // val region2: Int = 177
+            // val region3: Int = 112
+            // val region4: Int = 112
+            // val sizeWith: Int = 124
+            // val sizeHeight: Int = 124
+            // val qrcodePath: String =
+            //   config.getString("qrcodePath") + s"""/${UUID
+            //     .randomUUID()
+            //     .toString
+            //     .replaceAll("-", "")}.png"""
 
-            context.log.info("qrcode " + qrcodePath)
+            // Thumbnails
+            //   .of(screenPath)
+            //   .sourceRegion(region1, region2, region3, region4)
+            //   .size(sizeWith, sizeHeight)
+            //   .keepAspectRatio(true)
+            //   .toFile(qrcodePath)
+
+            context.log.info("qrcode " + qrcodeFile.getAbsolutePath())
 
             actor.tell(
               LoginScanResponse(
                 goldId,
-                config.getString("domain") + "/image?path=" + qrcodePath,
+                config.getString("domain") + "/image?path=" + qrcodeFile,
                 timeout - 10
               )
             )
