@@ -59,6 +59,10 @@ import com.dounine.jb.model.GoldModel
 import scala.concurrent.Await
 import org.openqa.selenium.remote.html5.RemoteWebStorage
 import com.dounine.jb.behavior.selenium.CdpRemoteWebDriver
+import org.apache.commons.io.IOUtils
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import scala.io.Source
 
 object GoldBehavior extends BaseRouter {
 
@@ -154,12 +158,17 @@ object GoldBehavior extends BaseRouter {
             chromeDriver =
               Option(new CdpRemoteWebDriver(new URL(hubUrl), chromeOptions))
 
-            val file =
-              new File(
-                GoldBehavior.getClass.getResource("/stealth.min.js").getPath()
-              )
+            // val file =
+            //   new File(
+            //     GoldBehavior.getClass.getResource("/stealth.min.js").getPath()
+            //   )
+            val is =
+              GoldBehavior.getClass.getClassLoader
+                .getResource("stealth.min.js")
+                .openStream
+
             val params: Map[String, Object] = Map(
-              "source" -> FileUtils.readFileToString(file, "utf-8")
+              "source" -> Source.fromInputStream(is).mkString
             )
 
             chromeDriver.get.executeCdpCommand(
