@@ -1,3 +1,5 @@
+![](https://github.com/dounine/wechat-tools-actor/workflows/Scala%20CI/badge.svg) ![](https://img.shields.io/github/license/dounine/wechat-tools-actor)
+
 # wechat-tools-actor
 ## 打包
 java -cp 运行
