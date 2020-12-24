@@ -134,21 +134,9 @@ object GoldBehavior extends BaseRouter {
           implicit val ec: ExecutionContextExecutor =
             materializer.executionContext
           val http = Http(materializer.system)
-          // var chromeDriver = Option.empty[ChromeDriver]
           val createChrome = (actor: ActorRef[BaseSerializer]) => {
-            // chromeDriver = Option(new ChromeDriver())
             val chromeOptions: ChromeOptions = new ChromeOptions()
-            // chromeOptions.setExperimentalOption(
-            //   "excludeSwitches",
-            //   Array("enable-automation")
-            // )
-            // chromeOptions.setExperimentalOption("useAutomationExtension", false)
-            // chromeOptions.addEncodedExtensions(
-            //   List("excludeSwitches", "enable-automation").asJava
-            // )
-            //  chromeOptions.addEncodedExtensions(
-            //   List("useAutomationExtension", "false").asJava
-            // )
+            
             val hubUrl: String = config.getString("model") match {
               case "pro"   => "http://chrome:4444/wd/hub"
               case "stage" => config.getString("selenium.remoteUrl")
@@ -158,10 +146,6 @@ object GoldBehavior extends BaseRouter {
             chromeDriver =
               Option(new CdpRemoteWebDriver(new URL(hubUrl), chromeOptions))
 
-            // val file =
-            //   new File(
-            //     GoldBehavior.getClass.getResource("/stealth.min.js").getPath()
-            //   )
             val is =
               GoldBehavior.getClass.getClassLoader
                 .getResource("stealth.min.js")
