@@ -108,6 +108,10 @@ object ChannelWebsocketBehavior extends BaseRouter {
                   }
                 case Idle(data) =>
                   cmd match {
+                    case e @ ChannelBehavior.Mergeing =>
+                      Effect.persist(e)
+                    case e @ ChannelBehavior.MergeFinish =>
+                      Effect.persist(e)
                     case e @ ChannelBehavior.DataDownloadResponse(_, _) =>
                       Effect.persist(e)
                     case e @ Create =>
@@ -158,6 +162,30 @@ object ChannelWebsocketBehavior extends BaseRouter {
                 }
               case self @ Idle(data) =>
                 cmd match {
+                  case ChannelBehavior.Mergeing =>
+                    data.client.foreach(client => {
+                      client ! OutgoingMessage(
+                        `type` = MessageType.channel,
+                        data = Option(
+                          Map(
+                            "type" -> "mergeing"
+                          )
+                        )
+                      )
+                    })
+                    self
+                  case ChannelBehavior.MergeFinish =>
+                    data.client.foreach(client => {
+                      client ! OutgoingMessage(
+                        `type` = MessageType.channel,
+                        data = Option(
+                          Map(
+                            "type" -> "mergeFinish"
+                          )
+                        )
+                      )
+                    })
+                    self
                   case ChannelBehavior.DataDownloadResponse(img, error) =>
                     data.client.foreach(client => {
                       client ! OutgoingMessage(

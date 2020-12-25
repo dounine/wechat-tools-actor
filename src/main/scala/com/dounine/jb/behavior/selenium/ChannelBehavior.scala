@@ -66,6 +66,10 @@ object ChannelBehavior extends BaseRouter {
 
   final case class QueryData(day: Int, games: Seq[String]) extends Event
 
+  final case object Mergeing extends Event
+
+  final case object MergeFinish extends Event
+
   final case class HandleResponse(
       game: String,
       process: Boolean,
@@ -283,6 +287,10 @@ object ChannelBehavior extends BaseRouter {
 //                    "utf-8"
 //                  )
 
+                  data.actor.tell(
+                    Mergeing
+                  )
+
                   val mergeBeginTime: LocalDateTime = LocalDateTime.now()
                   val days: Seq[String] = (1 to day)
                     .map(i => LocalDate.now().minusDays(i).toString)
@@ -343,6 +351,11 @@ object ChannelBehavior extends BaseRouter {
                           })
                       })
                     })
+
+                  data.actor.tell(
+                    MergeFinish
+                  )
+
                   context.log.info(
                     "合并处理耗时：{}秒、总行数为：{}",
                     java.time.Duration
