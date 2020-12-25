@@ -171,6 +171,7 @@ object ChannelBehavior extends BaseRouter {
                 )
               case QueryData(day, gameList) =>
                 data.oauthSid.foreach(oauth_sid => {
+                  val gamesBeginTime: LocalDateTime = LocalDateTime.now()
                   val list: Seq[ChannelModel.ApiCSVData] = gameList
                     .map(_.split(" "))
                     .flatMap(appid => {
@@ -261,6 +262,14 @@ object ChannelBehavior extends BaseRouter {
 
                       appResult
                     })
+                  context.log.info(
+                    "数据查询耗时：{}秒",
+                    java.time.Duration
+                      .between(gamesBeginTime, LocalDateTime.now())
+                      .getSeconds
+                  )
+
+                  val mergeBeginTime: LocalDateTime = LocalDateTime.now()
                   val days: Seq[String] = (1 to day)
                     .map(i => LocalDate.now().minusDays(i).toString)
                     .sorted
@@ -314,7 +323,15 @@ object ChannelBehavior extends BaseRouter {
                           })
                       })
                     })
-                  context.log.info("处理完成、总行数为：{}", mergeData.size)
+                  context.log.info(
+                    "合并处理耗时：{}秒、总行数为：{}",
+                    java.time.Duration
+                      .between(mergeBeginTime, LocalDateTime.now())
+                      .getSeconds,
+                    mergeData.size
+                  )
+
+                  val fileBeginTime: LocalDateTime = LocalDateTime.now()
                   val book = new HSSFWorkbook()
                   val sheet = book.createSheet("数据")
                   val headerRow = sheet.createRow(0)
@@ -341,6 +358,12 @@ object ChannelBehavior extends BaseRouter {
                   fos.flush()
                   fos.close()
                   book.close()
+                  context.log.info(
+                    "文件生成耗时：{}秒",
+                    java.time.Duration
+                      .between(fileBeginTime, LocalDateTime.now())
+                      .getSeconds
+                  )
                   data.actor.tell(
                     DataDownloadResponse(
                       url = Option(downloadFile.getAbsolutePath),
