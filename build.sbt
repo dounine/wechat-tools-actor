@@ -2,7 +2,7 @@ val akkaVersion = "2.6.10"
 val akkaHttpVersion = "10.2.1"
 val json4sVersion = "3.7.0-M6"
 
-import com.typesafe.sbt.packager.docker._
+resolvers += "Local Maven Repository" at "file://" + Path.userHome.absolutePath + "/.m2/repository"
 
 lazy val app = (project in file("."))
   .enablePlugins(JavaAppPackaging, DockerPlugin)
@@ -46,6 +46,8 @@ lazy val app = (project in file("."))
       "org.json4s" %% "json4s-ext" % json4sVersion,
       "net.lightbody.bmp" % "browsermob-proxy" % "2.1.5" pomOnly (),
       "org.seleniumhq.selenium" % "selenium-java" % "4.0.0-alpha-7",
+      "org.apache.poi" % "poi" % "4.1.2",
+      "org.apache.poi" % "poi-ooxml" % "4.1.2",
       "net.coobird" % "thumbnailator" % "0.4.13",
       "com.lightbend.akka.management" %% "akka-lease-kubernetes" % "1.0.9",
       "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.9",

@@ -118,7 +118,6 @@ object GoldBehavior extends BaseRouter {
       localStorages: Map[String, String],
       cookies: Map[String, String]
   ) extends State
-
   def apply(
       persistenceId: PersistenceId,
       shard: ActorRef[ClusterSharding.ShardCommand]
@@ -136,7 +135,7 @@ object GoldBehavior extends BaseRouter {
           val http = Http(materializer.system)
           val createChrome = (actor: ActorRef[BaseSerializer]) => {
             val chromeOptions: ChromeOptions = new ChromeOptions()
-            
+
             val hubUrl: String = config.getString("model") match {
               case "pro"   => "http://chrome:4444/wd/hub"
               case "stage" => config.getString("selenium.remoteUrl")

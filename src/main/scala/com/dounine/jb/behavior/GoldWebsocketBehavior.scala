@@ -33,10 +33,10 @@ import scala.concurrent.duration._
 import com.dounine.jb.behavior.platform.selenium.GoldBehavior
 import java.util.UUID
 
-object WebsocketBehavior extends BaseRouter {
+object GoldWebsocketBehavior extends BaseRouter {
 
   val typeKey: EntityTypeKey[BaseSerializer] =
-    EntityTypeKey[BaseSerializer](s"WebsocketBehavior")
+    EntityTypeKey[BaseSerializer](s"GoldWebsocketBehavior")
 
   trait Event extends BaseSerializer
 
@@ -85,7 +85,6 @@ object WebsocketBehavior extends BaseRouter {
     Behaviors
       .supervise(
         Behaviors.setup { context: ActorContext[BaseSerializer] =>
-          context.log.info("******  websocket started  ******")
           val logOn: Boolean = config.getBoolean("log.websocket")
           val sharding: ClusterSharding = ClusterSharding(context.system)
           val commandHandler
@@ -173,6 +172,7 @@ object WebsocketBehavior extends BaseRouter {
                     case e @ Error(_)                     => Effect.persist(e).thenUnstashAll()
                     case e @ ReceiveMessage(text: String) => Effect.persist(e)
                     case Stop =>
+                      context.log.info("gold websocket behavior stop")
                       data.golds.foreach(item => {
                         item.tell(GoldBehavior.Stop)
                       })
@@ -190,7 +190,7 @@ object WebsocketBehavior extends BaseRouter {
                 cmd match {
                   case Error(msg) =>
                     data.client.foreach(
-                      _ ! WebsocketBehavior.OutgoingMessage(
+                      _ ! GoldWebsocketBehavior.OutgoingMessage(
                         `type` = MessageType.errorPush,
                         msg = Option(msg)
                       )
@@ -215,7 +215,7 @@ object WebsocketBehavior extends BaseRouter {
                     )
                   case Error(msg) =>
                     data.client.foreach(
-                      _ ! WebsocketBehavior.OutgoingMessage(
+                      _ ! GoldWebsocketBehavior.OutgoingMessage(
                         `type` = MessageType.errorPush,
                         msg = Option(msg)
                       )

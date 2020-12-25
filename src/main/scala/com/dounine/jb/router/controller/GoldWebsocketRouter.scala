@@ -14,7 +14,7 @@ import akka.persistence.typed.PersistenceId
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.{CompletionStrategy, OverflowStrategy, _}
 import com.dounine.jb.behavior
-import com.dounine.jb.behavior.{WebsocketBehavior, virtual}
+import com.dounine.jb.behavior.{GoldWebsocketBehavior, virtual}
 import com.dounine.jb.model.BaseSerializer
 import com.dounine.jb.tools.json.BaseRouter
 import org.json4s.native.Serialization.write
@@ -23,7 +23,7 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
-class WebsocketRouter(system: ActorSystem[_]) extends BaseRouter {
+class GoldWebsocketRouter(system: ActorSystem[_]) extends BaseRouter {
 
   implicit val materializer: Materializer = SystemMaterializer(
     system
@@ -34,7 +34,7 @@ class WebsocketRouter(system: ActorSystem[_]) extends BaseRouter {
 
   val routeFragment: Route = concat(
     get {
-      path(pm = "ws") {
+      path(pm = "ws" / "gold") {
         extractClientIP { ip: RemoteAddress =>
           handleWebSocketMessages(createConnect(ip))
         }
@@ -48,7 +48,7 @@ class WebsocketRouter(system: ActorSystem[_]) extends BaseRouter {
     val uuid = UUID.randomUUID().toString.replaceAll("-", "")
     val sharding: ClusterSharding = ClusterSharding(system)
     val socketBehavior: EntityRef[BaseSerializer] = sharding
-      .entityRefFor(WebsocketBehavior.typeKey, uuid)
+      .entityRefFor(GoldWebsocketBehavior.typeKey, uuid)
 
     val completion: PartialFunction[Any, CompletionStrategy] = { case Done =>
       CompletionStrategy.immediately
@@ -63,23 +63,25 @@ class WebsocketRouter(system: ActorSystem[_]) extends BaseRouter {
         .mapAsync(parallelism = 1) { elem =>
           elem.andThen({
             case Success(value) =>
-              socketBehavior.tell(WebsocketBehavior.ReceiveMessage(value))
+              socketBehavior.tell(GoldWebsocketBehavior.ReceiveMessage(value))
             case Failure(exception) =>
-              socketBehavior.tell(WebsocketBehavior.Error(exception.getMessage))
+              socketBehavior.tell(
+                GoldWebsocketBehavior.Error(exception.getMessage)
+              )
           })
         }
         .to(Sink.ignore)
 
     val outgoingMessages: Source[Message, _] =
       Source
-        .actorRef[WebsocketBehavior.OutgoingMessage](
+        .actorRef[GoldWebsocketBehavior.OutgoingMessage](
           completionMatcher = completion,
           failureMatcher = PartialFunction.empty,
           bufferSize = 100,
           overflowStrategy = OverflowStrategy.dropHead
         )
         .mapMaterializedValue { outActor =>
-          socketBehavior.tell(WebsocketBehavior.Connected(outActor, ip))
+          socketBehavior.tell(GoldWebsocketBehavior.Connected(outActor, ip))
         }
         .map(msg => TextMessage.Strict(write(msg)))
         .keepAlive(
@@ -89,7 +91,7 @@ class WebsocketRouter(system: ActorSystem[_]) extends BaseRouter {
     Flow
       .fromSinkAndSourceCoupled(incomingMessages, outgoingMessages)
       .watchTermination() { (_, c) =>
-        c.onComplete(_ => socketBehavior.tell(WebsocketBehavior.Stop))
+        c.onComplete(_ => socketBehavior.tell(GoldWebsocketBehavior.Stop))
         NotUsed
       }
   }

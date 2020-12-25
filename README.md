@@ -10,7 +10,7 @@ cd target/universal && unzip wechat-tools-actor-0.1.0-SNAPSHOT.zip
 docker 方式运行
 ```
 # 打包
-sbt clean docker:publishLocal
+sbt clean docker:publishLocal -Denv=prod
 # 运行
 docker run --rm -ti wechat-tools-actor:0.1.0-SNAPSHOT
 ```

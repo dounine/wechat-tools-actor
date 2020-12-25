@@ -38,7 +38,18 @@ object SocketModel {
   sealed trait MessageBody extends BaseSerializer
 
   final case class ClientMessage(
-      `type`: MessageType
+      `type`: MessageType,
+      data: Map[String, Any]
+  ) extends BaseSerializer
+
+  final case class DataQuery(
+      day: Int,
+      games: Seq[String]
+  ) extends BaseSerializer
+
+  final case class DataQueryMessage(
+      `type`: String,
+      data: DataQuery
   ) extends BaseSerializer
 
   final case class ClientTypeData[T: Manifest](
@@ -50,7 +61,7 @@ object SocketModel {
   ) extends BaseSerializer
 
   case class ClientSubMessageBody(
-      `type`: MessageType,
+      `type`: MessageType
   ) extends BaseSerializer
 
   final case class ClientSubMessageData2(

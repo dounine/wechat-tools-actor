@@ -10,14 +10,7 @@ import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse}
-import akka.http.scaladsl.server.Directives.{
-  complete,
-  concat,
-  extractClientIP,
-  get,
-  path,
-  _
-}
+import akka.http.scaladsl.server.Directives.{complete, concat, extractClientIP, get, path, _}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.management.cluster.bootstrap.ClusterBootstrap
 import akka.management.cluster.scaladsl.ClusterHttpManagementRoutes
@@ -25,10 +18,7 @@ import akka.management.scaladsl.AkkaManagement
 import akka.pattern.AskTimeoutException
 import akka.persistence.typed.PersistenceId
 import akka.stream.{Materializer, SystemMaterializer}
-import com.dounine.jb.behavior.{
-  ReplicatedCache,
-  WebsocketBehavior,
-}
+import com.dounine.jb.behavior.{ChannelWebsocketBehavior, GoldWebsocketBehavior, ReplicatedCache}
 import com.dounine.jb.model.BaseSerializer
 import com.dounine.jb.router.controller._
 import com.dounine.jb.service.AkkaPersistenerService
@@ -42,9 +32,15 @@ import scala.util.{Failure, Success}
 import com.dounine.jb.behavior.platform.selenium.GoldBehavior
 import java.nio.file.Files
 import java.nio.file.Paths
+
 import akka.http.scaladsl.model.ContentType
 import akka.http.scaladsl.model.MediaTypes
 import java.io.File
+import java.time.LocalDate
+
+import akka.stream.scaladsl.{FileIO, Source}
+import akka.util.ByteString
+import com.dounine.jb.behavior.selenium.ChannelBehavior
 import com.dounine.jb.behavior.virtual.UserBehavior
 
 object Bootstrap extends BaseRouter {
@@ -105,6 +101,23 @@ object Bootstrap extends BaseRouter {
                 s"""hello world for jbserver ${system.address} ${InetAddress.getLocalHost.getHostAddress}"""
               )
             }
+          } ~ path("download" / Segment) { fileName =>
+            parameterMap { parameters =>
+              val file = new File(parameters("path"))
+              val source: Source[ByteString, Unit] = FileIO
+                .fromPath(file.toPath)
+                .watchTermination() { case (_, result) =>
+                }
+              complete(
+                HttpResponse(
+                  200,
+                  entity = HttpEntity(
+                    ContentTypes.`application/octet-stream`,
+                    source
+                  )
+                )
+              )
+            }
           } ~
             path("image") {
               parameterMap { parameters =>
@@ -134,7 +147,8 @@ object Bootstrap extends BaseRouter {
             }
         },
         new HealthRouter(system).routeFragment,
-        new WebsocketRouter(system).routeFragment
+        new GoldWebsocketRouter(system).routeFragment,
+        new ChannelWebsocketRouter(system).routeFragment
       )
     )
     val cluster: Cluster = Cluster.get(system)
@@ -169,17 +183,45 @@ object Bootstrap extends BaseRouter {
           )
             .withStopMessage(UserBehavior.Shutdown)
         )
-      
+
       sharding.init(
-        Entity(typeKey = WebsocketBehavior.typeKey)(createBehavior =
+        Entity(typeKey = ChannelWebsocketBehavior.typeKey)(createBehavior =
           entityContext =>
-            WebsocketBehavior(
+            ChannelWebsocketBehavior(
               PersistenceId
-                .of(WebsocketBehavior.typeKey.name, entityContext.entityId),
+                .of(
+                  ChannelWebsocketBehavior.typeKey.name,
+                  entityContext.entityId
+                ),
               entityContext.shard
             )
         )
-          .withStopMessage(WebsocketBehavior.Shutdown)
+          .withStopMessage(ChannelWebsocketBehavior.Shutdown)
+      )
+      sharding.init(
+        Entity(typeKey = ChannelBehavior.typeKey)(createBehavior =
+          entityContext =>
+            ChannelBehavior(
+              PersistenceId
+                .of(
+                  ChannelBehavior.typeKey.name,
+                  entityContext.entityId
+                ),
+              entityContext.shard
+            )
+        )
+          .withStopMessage(ChannelBehavior.Shutdown)
+      )
+      sharding.init(
+        Entity(typeKey = GoldWebsocketBehavior.typeKey)(createBehavior =
+          entityContext =>
+            GoldWebsocketBehavior(
+              PersistenceId
+                .of(GoldWebsocketBehavior.typeKey.name, entityContext.entityId),
+              entityContext.shard
+            )
+        )
+          .withStopMessage(GoldWebsocketBehavior.Shutdown)
       )
 
       sharding.init(
