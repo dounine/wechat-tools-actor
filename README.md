@@ -14,3 +14,7 @@ sbt clean docker:publishLocal -Denv=prod
 # 运行
 docker run --rm -ti wechat-tools-actor:0.1.0-SNAPSHOT
 ```
+下载包慢
+```
+export ANT_OPTS="-Dhttp.proxyHost=192.168.0.35 -Dhttp.proxyPort=1087" && sbt clean package -Denv=prod
+```
