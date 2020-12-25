@@ -53,6 +53,7 @@ lazy val app = (project in file("."))
       "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.9",
       "com.lightbend.akka.discovery" %% "akka-discovery-kubernetes-api" % "1.0.9",
       "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % "1.0.9",
+      "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.0",
       "com.chuusai" %% "shapeless" % "2.3.3",
       "io.underscore" %% "slickless" % "0.3.6",
       "io.altoo" %% "akka-kryo-serialization" % "1.1.5",

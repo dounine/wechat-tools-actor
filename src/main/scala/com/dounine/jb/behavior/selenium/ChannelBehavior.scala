@@ -23,12 +23,13 @@ import com.dounine.jb.model.{BaseSerializer, ChannelModel, GoldModel}
 import com.dounine.jb.service.ChannelService
 import com.dounine.jb.tools.json.BaseRouter
 import com.dounine.jb.tools.util.SingletonService
+import org.apache.commons.io.FileUtils
 import org.apache.poi.hssf.usermodel.{HSSFRow, HSSFWorkbook}
 import org.openqa.selenium.{By, Dimension, OutputType}
 import org.openqa.selenium.chrome.ChromeOptions
 import org.openqa.selenium.remote.RemoteExecuteMethod
 import org.openqa.selenium.remote.html5.RemoteWebStorage
-
+import scala.collection.parallel._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
 import scala.io.Source
@@ -262,6 +263,7 @@ object ChannelBehavior extends BaseRouter {
 
                       appResult
                     })
+
                   context.log.info(
                     "数据查询耗时：{}秒",
                     java.time.Duration
@@ -269,30 +271,48 @@ object ChannelBehavior extends BaseRouter {
                       .getSeconds
                   )
 
+//                  FileUtils.writeStringToFile(
+//                    new File("/tmp/gameList.txt"),
+//                    toJsonString(gameList),
+//                    "utf-8"
+//                  )
+//
+//                  FileUtils.writeStringToFile(
+//                    new File("/tmp/list.txt"),
+//                    toJsonString(list),
+//                    "utf-8"
+//                  )
+
                   val mergeBeginTime: LocalDateTime = LocalDateTime.now()
                   val days: Seq[String] = (1 to day)
                     .map(i => LocalDate.now().minusDays(i).toString)
                     .sorted
                   val games: Seq[String] = list.map(_.name).distinct
-                  val mergeData: Seq[ChannelModel.ApiExportData] = gameList
+                  val mergeData = gameList.toParArray
                     .map(_.split(" "))
-                    .flatMap(appid => {
+                    .flatMap(tp2 => {
+                      val appid: String = tp2.head
+                      val appName: String = tp2.last
                       games.flatMap(game => {
                         days
                           .flatMap(day => {
+                            val registerOrActive: Seq[ChannelModel.ApiCSVData] =
+                              list.filter(p =>
+                                p.appid == appid && p.name == game && p.date == day
+                              )
                             val register: Option[ChannelModel.ApiCSVData] =
-                              list.find(p =>
-                                p.appid == appid.head && p.name == game && p.register && p.date == day
+                              registerOrActive.find(p =>
+                                p.appid == appid && p.name == game && p.register && p.date == day
                               )
                             val active: Option[ChannelModel.ApiCSVData] =
-                              list.find(p =>
-                                p.appid == appid.head && p.name == game && !p.register && p.date == day
+                              registerOrActive.find(p =>
+                                p.appid == appid && p.name == game && !p.register && p.date == day
                               )
                             if (register.isDefined || active.isDefined) {
                               Seq(
                                 ChannelModel.ApiExportData(
-                                  appid = appid.head,
-                                  name = appid.last,
+                                  appid = appid,
+                                  name = appName,
                                   ccode = game,
                                   date = day,
                                   register = register
@@ -341,7 +361,7 @@ object ChannelBehavior extends BaseRouter {
                     headerRow.createCell(i).setCellValue(titles(i))
                   })
 
-                  mergeData.indices.foreach(i => {
+                  mergeData.toList.indices.foreach(i => {
                     val item: ChannelModel.ApiExportData = mergeData(i)
                     val row: HSSFRow = sheet.createRow(i + 1)
                     row.createCell(0).setCellValue(item.appid)
