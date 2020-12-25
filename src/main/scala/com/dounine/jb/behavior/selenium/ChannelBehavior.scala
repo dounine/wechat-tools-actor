@@ -314,7 +314,7 @@ object ChannelBehavior extends BaseRouter {
                           })
                       })
                     })
-
+                  context.log.info("处理完成、总行数为：{}", mergeData.size)
                   val book = new HSSFWorkbook()
                   val sheet = book.createSheet("数据")
                   val headerRow = sheet.createRow(0)
@@ -323,6 +323,7 @@ object ChannelBehavior extends BaseRouter {
                   titles.indices.foreach(i => {
                     headerRow.createCell(i).setCellValue(titles(i))
                   })
+
                   mergeData.indices.foreach(i => {
                     val item: ChannelModel.ApiExportData = mergeData(i)
                     val row: HSSFRow = sheet.createRow(i + 1)
