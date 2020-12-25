@@ -116,7 +116,7 @@ object ChannelWebsocketBehavior extends BaseRouter {
                       Effect.persist(e)
                     case e @ ChannelBehavior.QrCodeQueryResponse(_, _) =>
                       Effect.persist(e)
-                    case e @ ChannelBehavior.HandleResponse(_, _, _) =>
+                    case e @ ChannelBehavior.HandleResponse(_, _, _, _) =>
                       Effect.persist(e)
                     case e @ Error(_)          => Effect.persist(e).thenUnstashAll()
                     case e @ ReceiveMessage(_) => Effect.persist(e)
@@ -178,7 +178,7 @@ object ChannelWebsocketBehavior extends BaseRouter {
                     })
                     self
                   case ChannelBehavior
-                        .HandleResponse(game, process, success) =>
+                        .HandleResponse(game, process, success, delay) =>
                     data.client.foreach(client => {
                       client ! OutgoingMessage(
                         `type` = MessageType.channel,
@@ -187,6 +187,7 @@ object ChannelWebsocketBehavior extends BaseRouter {
                             "type" -> "gameFinish",
                             "process" -> process,
                             "game" -> game,
+                            "delay" -> delay,
                             "success" -> success
                           )
                         )

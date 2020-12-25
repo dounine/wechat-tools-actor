@@ -2,7 +2,7 @@ package com.dounine.jb.behavior.selenium
 
 import java.io.{File, FileOutputStream}
 import java.net.URL
-import java.time.LocalDate
+import java.time.{LocalDate, LocalDateTime}
 import java.util.concurrent.TimeUnit
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
@@ -68,7 +68,8 @@ object ChannelBehavior extends BaseRouter {
   final case class HandleResponse(
       game: String,
       process: Boolean,
-      success: Boolean
+      success: Boolean,
+      delay: Option[Long]
   ) extends Event
 
   final case class DataDownloadResponse(
@@ -173,11 +174,13 @@ object ChannelBehavior extends BaseRouter {
                   val list: Seq[ChannelModel.ApiCSVData] = gameList
                     .map(_.split(" "))
                     .flatMap(appid => {
+                      val beginTime: LocalDateTime = LocalDateTime.now()
                       data.actor.tell(
                         HandleResponse(
                           game = appid.mkString(" "),
                           process = true,
-                          success = true
+                          success = true,
+                          delay = Option.empty
                         )
                       )
                       val appResult: Seq[ChannelModel.ApiCSVData] =
@@ -189,50 +192,56 @@ object ChannelBehavior extends BaseRouter {
                                   appid.head.trim,
                                   oauth_sid
                                 )
-                                .map(userInfo => {
-                                  userInfo.data.share_perm_data.perm_list
-                                    .flatMap(item => {
-                                      //                              data.actor ! WsApi2.PushMessage(Modes.ScanItemD("scan-item", item.channel_name))
-                                      item.stat_list.flatMap(
-                                        registerOrActive => {
-                                          Await.result(
-                                            channelService
-                                              .dataQuery(
-                                                appid.head,
-                                                day,
-                                                registerOrActive.stat_type,
-                                                registerOrActive.data_field_id,
-                                                item.channel_name,
-                                                item.out_group_id,
-                                                item.out_channel_id,
-                                                oauth_sid
-                                              )
-                                              .map(data => {
-                                                data.data.sequence_data_list.head.point_list
-                                                  .map(dataItem => {
-                                                    ChannelModel.ApiCSVData(
-                                                      item.channel_name,
-                                                      appid.head,
-                                                      dataItem.label,
-                                                      registerOrActive.stat_type == 1000091,
-                                                      dataItem.value
-                                                        .getOrElse(0)
-                                                    )
-                                                  })
-                                              }),
-                                            Duration.Inf
-                                          )
+                                .flatMap { userInfo =>
+                                  val pemListFuture =
+                                    userInfo.data.share_perm_data.perm_list
+                                      .map { item =>
+                                        val futureList: Seq[
+                                          Future[List[ChannelModel.ApiCSVData]]
+                                        ] = item.stat_list.map { registerOrActive =>
+                                          channelService
+                                            .dataQuery(
+                                              appid.head,
+                                              day,
+                                              registerOrActive.stat_type,
+                                              registerOrActive.data_field_id,
+                                              item.channel_name,
+                                              item.out_group_id,
+                                              item.out_channel_id,
+                                              oauth_sid
+                                            )
+                                            .map(data => {
+                                              data.data.sequence_data_list.head.point_list
+                                                .map(dataItem => {
+                                                  ChannelModel.ApiCSVData(
+                                                    item.channel_name,
+                                                    appid.head,
+                                                    dataItem.label,
+                                                    registerOrActive.stat_type == 1000091,
+                                                    dataItem.value
+                                                      .getOrElse(0)
+                                                  )
+                                                })
+                                            })
                                         }
-                                      )
-                                    })
-                                }),
+                                        Future.sequence(futureList)
+                                      }
+                                  Future
+                                    .sequence(pemListFuture)
+                                    .map(_.flatten.flatten)
+                                },
                               Duration.Inf
                             )
                           data.actor.tell(
                             HandleResponse(
                               game = appid.mkString(" "),
                               process = false,
-                              success = true
+                              success = true,
+                              delay = Option(
+                                java.time.Duration
+                                  .between(beginTime, LocalDateTime.now())
+                                  .getSeconds
+                              )
                             )
                           )
                           value
@@ -243,7 +252,8 @@ object ChannelBehavior extends BaseRouter {
                               HandleResponse(
                                 game = appid.mkString(" "),
                                 process = false,
-                                success = false
+                                success = false,
+                                delay = Option.empty
                               )
                             )
                             Seq.empty
@@ -330,26 +340,12 @@ object ChannelBehavior extends BaseRouter {
                   fos.flush()
                   fos.close()
                   book.close()
-//                      f
-//                    })
-
-//                  result.onComplete({
-//                    case Success(value) =>
                   data.actor.tell(
                     DataDownloadResponse(
                       url = Option(downloadFile.getAbsolutePath),
                       error = Option.empty
                     )
                   )
-//                    case Failure(exception) =>
-//                      exception.printStackTrace()
-//                      data.actor.tell(
-//                        DataDownloadResponse(
-//                          url = Option.empty,
-//                          error = Option(exception.getMessage)
-//                        )
-//                      )ƒ
-//                  })
                 })
                 data
               case QrCodeQuery() =>

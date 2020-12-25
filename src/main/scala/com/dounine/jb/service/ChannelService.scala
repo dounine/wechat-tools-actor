@@ -240,7 +240,6 @@ class ChannelService(system: ActorSystem[_])
           Unmarshaller
             .stringUnmarshaller(entity)
             .map(item => {
-              logger.info("dataQuery response {}", item)
               item
             })
             .map(convertTo[ChannelModel.ApiScanGameDataResponse])
