@@ -9,7 +9,7 @@ import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, HttpResponse}
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.http.scaladsl.{Http, HttpExt}
-import akka.stream.SystemMaterializer
+import akka.stream.{OverflowStrategy, SystemMaterializer}
 import akka.stream.scaladsl.FileIO
 import com.dounine.jb.model.ChannelModel
 import com.dounine.jb.store.UserTable
@@ -246,7 +246,6 @@ class ChannelService(system: ActorSystem[_])
         } catch {
           case e => Future.failed(new Exception(e.getMessage))
         }
-
       case msg @ _ =>
         logger.error(s"请求失败 $msg")
         Future.failed(new Exception(s"请求失败 $msg"))
@@ -281,7 +280,6 @@ class ChannelService(system: ActorSystem[_])
           Unmarshaller
             .stringUnmarshaller(entity)
             .map(item => {
-              logger.info("getsharepermuserinfo response {}", item)
               item
             })
             .map(convertTo[ChannelModel.ApiScanGameUserInfo])
