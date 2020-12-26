@@ -2,9 +2,11 @@
 **/.bloop/
 jb.iml
 target/
+.gradle/
+.bloop/
+build/
 .vscode/
 .metals/
-.bloop/
 .classpath
 .history/
 .scalafmt.conf
