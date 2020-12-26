@@ -1,39 +1,23 @@
 package com.dounine.jb.behavior.selenium
 
-import java.io.{File, FileOutputStream}
-import java.net.URL
-import java.time.{LocalDate, LocalDateTime}
-import java.util.concurrent.TimeUnit
-
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, PreRestart, SupervisorStrategy}
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, EntityTypeKey}
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{HttpMethods, HttpRequest, HttpResponse}
-import akka.http.scaladsl.model.headers.RawHeader
 import akka.persistence.typed._
-import akka.persistence.typed.scaladsl.{
-  Effect,
-  EventSourcedBehavior,
-  RetentionCriteria
-}
+import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, RetentionCriteria}
 import akka.stream.{Materializer, SystemMaterializer}
-import akka.util.ByteString
-import com.dounine.jb.model.{BaseSerializer, ChannelModel, GoldModel}
+import com.dounine.jb.model.{BaseSerializer, ChannelModel}
 import com.dounine.jb.service.ChannelService
 import com.dounine.jb.tools.json.BaseRouter
 import com.dounine.jb.tools.util.SingletonService
-import org.apache.commons.io.FileUtils
 import org.apache.poi.hssf.usermodel.{HSSFRow, HSSFWorkbook}
-import org.openqa.selenium.{By, Dimension, OutputType}
-import org.openqa.selenium.chrome.ChromeOptions
-import org.openqa.selenium.remote.RemoteExecuteMethod
-import org.openqa.selenium.remote.html5.RemoteWebStorage
+
+import java.io.{File, FileOutputStream}
+import java.time.{LocalDate, LocalDateTime}
 import scala.collection.parallel._
-import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
-import scala.io.Source
-import scala.jdk.CollectionConverters._
+import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
 
 object ChannelBehavior extends BaseRouter {

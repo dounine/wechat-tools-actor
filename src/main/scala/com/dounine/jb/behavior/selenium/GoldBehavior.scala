@@ -1,68 +1,29 @@
 package com.dounine.jb.behavior.platform.selenium
 
-import java.time.LocalDateTime
-import java.util.concurrent.TimeUnit
-
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, PreRestart, SupervisorStrategy}
-import akka.cluster.sharding.typed.scaladsl.EntityTypeKey
-import akka.persistence.typed.scaladsl.{
-  Effect,
-  EventSourcedBehavior,
-  RetentionCriteria
-}
-import akka.persistence.typed._
-import com.dounine.jb.model.BaseSerializer
-
-import scala.concurrent.duration._
-import org.openqa.selenium.chrome.ChromeOptions
-import org.openqa.selenium.remote.{
-  CapabilityType,
-  Command,
-  RemoteExecuteMethod,
-  RemoteWebDriver
-}
-import com.dounine.jb.tools.json.BaseRouter
-import java.net.URL
-
-import org.openqa.selenium.Dimension
-import org.openqa.selenium.By
-import akka.cluster.sharding.typed.scaladsl.ClusterSharding
-import java.io.File
-
-import org.openqa.selenium.OutputType
-import java.util.UUID
-
-import org.apache.commons.io.FileUtils
-import net.coobird.thumbnailator.Thumbnails
-import org.openqa.selenium.chrome.ChromeDriver
-
-import scala.jdk.CollectionConverters._
+import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, EntityTypeKey}
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.HttpRequest
-import akka.http.scaladsl.model.HttpMethods
-import akka.http.scaladsl.model.HttpEntity
-import akka.http.scaladsl.model.ContentTypes
-import com.dounine.jb.tools.akka.ProxySetting
-import akka.http.scaladsl.model.HttpResponse
-import akka.util.ByteString
-import akka.stream.SystemMaterializer
-import akka.stream.Materializer
-
-import scala.concurrent.ExecutionContextExecutor
-import scala.concurrent.Future
-import scala.util.Success
-import scala.util.Failure
+import akka.http.scaladsl.model.{HttpMethods, HttpRequest, HttpResponse}
 import akka.http.scaladsl.model.headers.RawHeader
-import com.dounine.jb.model.GoldModel
-
-import scala.concurrent.Await
-import org.openqa.selenium.remote.html5.RemoteWebStorage
+import akka.persistence.typed._
+import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, RetentionCriteria}
+import akka.stream.{Materializer, SystemMaterializer}
+import akka.util.ByteString
 import com.dounine.jb.behavior.selenium.CdpRemoteWebDriver
-import org.apache.commons.io.IOUtils
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import com.dounine.jb.model.{BaseSerializer, GoldModel}
+import com.dounine.jb.tools.json.BaseRouter
+import org.openqa.selenium.{By, Dimension, OutputType}
+import org.openqa.selenium.chrome.ChromeOptions
+import org.openqa.selenium.remote.RemoteExecuteMethod
+import org.openqa.selenium.remote.html5.RemoteWebStorage
+
+import java.net.URL
+import java.util.concurrent.TimeUnit
+import scala.concurrent.{Await, ExecutionContextExecutor, Future}
+import scala.concurrent.duration._
 import scala.io.Source
+import scala.jdk.CollectionConverters._
 
 object GoldBehavior extends BaseRouter {
 
