@@ -5,11 +5,11 @@
 ## Gradle
 普通压缩包
 ```shell
-gradle clean build -Denv=prod
+./gradlew clean build -Denv=prod
 ```
 Docker运行包
 ```shell
-gradle clean build docker -Denv=prod
+./gradlew clean build docker -Denv=prod
 ```
 
 ## SBT
