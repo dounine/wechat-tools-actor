@@ -79,7 +79,7 @@ object Bootstrap extends BaseRouter {
 
   def main(args: Array[String]): Unit = {
     implicit val system: ActorSystem[NotUsed] =
-      ActorSystem(Behaviors.empty, "jbserver")
+      ActorSystem(Behaviors.empty, config.getString("name"))
     implicit val materialize: Materializer = SystemMaterializer(
       system
     ).materializer
@@ -98,7 +98,7 @@ object Bootstrap extends BaseRouter {
           path(pm = "") {
             extractClientIP { ip =>
               complete(
-                s"""hello world for jbserver ${system.address} ${InetAddress.getLocalHost.getHostAddress}"""
+                s"""hello world for ${config.getString("name")} ${system.address} ${InetAddress.getLocalHost.getHostAddress}"""
               )
             }
           } ~ path("download" / Segment) { fileName =>
