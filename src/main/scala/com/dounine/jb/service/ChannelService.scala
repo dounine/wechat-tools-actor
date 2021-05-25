@@ -71,6 +71,7 @@ class ChannelService(system: ActorSystem[_])
   }
 
   def qrcode(uuid: String): Future[File] = {
+    logger.info("qrcode uuid -> {}", uuid)
     val urlPath = s"https://open.weixin.qq.com${uuid}"
     val responseFuture = http
       .singleRequest(
@@ -93,6 +94,7 @@ class ChannelService(system: ActorSystem[_])
   }
 
   def statusQuery(uuid: String): Future[ChannelModel.ApiScanStatusResponse] = {
+    logger.info("statusQuery uuid -> {}", uuid)
     val urlPath =
       s"https://lp.open.weixin.qq.com/connect/l/qrconnect?uuid=${uuid.split('/').last}&last=404&_=${System.currentTimeMillis()}"
     val responseFuture = http
@@ -134,6 +136,7 @@ class ChannelService(system: ActorSystem[_])
   def loginauth2(
       code: String
   ): Future[ChannelModel.ApiScanLoginAuthResponse] = {
+    logger.info("loginauth2 code -> {}", code)
     val urlPath =
       s"https://game.weixin.qq.com/cgi-bin/gamebizauthwap/loginoauth2?appid=wxd3b2f88404faa210&code=${code}&needLogin=true&method=GET&abtest_cookie=&abt=&build_version=2020041712&QB&"
 
@@ -256,6 +259,11 @@ class ChannelService(system: ActorSystem[_])
       appid: String,
       oauth_sid: String
   ): Future[ChannelModel.ApiScanGameUserInfo] = {
+    logger.info(
+      "getsharepermuserinfo appid -> {} , oauth_sid -> {}",
+      appid,
+      oauth_sid
+    )
     val urlPath =
       s"https://game.weixin.qq.com/cgi-bin/gamewxagchannelwap/getsharepermuserinfo?appid=${appid}&needLogin=true&method=GET&abtest_cookie=&abt=&build_version=2020041712&QB&"
 
