@@ -124,8 +124,7 @@ object ChannelBehavior extends BaseRouter {
             SingletonService.instance(classOf[ChannelService], context.system)
           implicit val materializer: Materializer =
             Materializer(context)
-          implicit val ec: ExecutionContextExecutor =
-            materializer.executionContext
+          implicit val ec: ExecutionContextExecutor = context.executionContext
           val (clientActor, clientSource) = ActorSource
             .actorRef[QueryData](
               completionMatcher = PartialFunction.empty,
@@ -184,94 +183,125 @@ object ChannelBehavior extends BaseRouter {
                       type APPID = String
                       Source(games)
                         .map(_.split(" "))
-                        .sliding(2)
-                        .map(tp2 => {
-                          logger.info("proessing -> {}", tp2.head)
+                        .flatMapConcat(appid => {
                           dataStore.actor.foreach(
                             _.tell(
                               HandleResponse(
-                                game = tp2.head.mkString(" "),
-                                process = false,
-                                success = true,
-                                delay = Option.empty
-                              )
-                            )
-                          )
-                          dataStore.actor.foreach(
-                            _.tell(
-                              HandleResponse(
-                                game = tp2.last.mkString(" "),
+                                game = appid.mkString(" "),
                                 process = true,
                                 success = true,
                                 delay = Option.empty
                               )
                             )
                           )
-                          tp2.head
-                        })
-                        .mapAsync(1)(appid => {
-                          channelService
-                            .getsharepermuserinfo(
-                              appid.head.trim,
-                              oauthSid
-                            )
-                            .map(data => {
-                              data.data.share_perm_data.perm_list
-                                .map(i =>
-                                  Tuple2[ChannelModel.PermItem, APPID](
-                                    i,
-                                    appid.head
-                                  )
+                          val beginTime: LocalDateTime = LocalDateTime.now()
+                          Source
+                            .single(appid)
+                            .mapAsync(1)(appid => {
+                              channelService
+                                .getsharepermuserinfo(
+                                  appid.head.trim,
+                                  oauthSid
                                 )
-                            })
-                        })
-                        .mapConcat(identity)
-                        .map(item => {
-                          item._1.stat_list.map(i =>
-                            (
-                              item._1.copy(
-                                stat_list = Nil
-                              ),
-                              i,
-                              item._2
-                            )
-                          )
-                        })
-                        .mapConcat(identity)
-                        .throttle(1, 500.milliseconds)
-                        .mapAsync(1)(tp3 => {
-                          val appid = tp3._3
-                          val registerOrActive = tp3._2
-                          val item = tp3._1
-                          channelService
-                            .dataQuery(
-                              appid,
-                              day,
-                              registerOrActive.stat_type,
-                              registerOrActive.data_field_id,
-                              item.channel_name,
-                              item.out_group_id,
-                              item.out_channel_id,
-                              oauthSid
-                            )
-                            .map(data => {
-                              if (data.errcode != 0) {
-                                throw new Exception(data.errmsg)
-                              }
-                              data.data.sequence_data_list.head.point_list
-                                .map(dataItem => {
-                                  ChannelModel.ApiCSVData(
-                                    item.channel_name,
-                                    appid,
-                                    dataItem.label,
-                                    registerOrActive.stat_type == 1000091,
-                                    dataItem.value
-                                      .getOrElse(0)
-                                  )
+                                .map(data => {
+                                  data.data.share_perm_data.perm_list
+                                    .map(i =>
+                                      Tuple2[ChannelModel.PermItem, APPID](
+                                        i,
+                                        appid.head
+                                      )
+                                    )
                                 })
                             })
+                            .mapConcat(identity)
+                            .map(item => {
+                              item._1.stat_list.map(i =>
+                                (
+                                  item._1.copy(
+                                    stat_list = Nil
+                                  ),
+                                  i,
+                                  item._2
+                                )
+                              )
+                            })
+                            .mapConcat(identity)
+                            .throttle(1, 500.milliseconds)
+                            .mapAsync(1)(tp3 => {
+                              val appid = tp3._3
+                              val registerOrActive = tp3._2
+                              val item = tp3._1
+                              channelService
+                                .dataQuery(
+                                  appid,
+                                  day,
+                                  registerOrActive.stat_type,
+                                  registerOrActive.data_field_id,
+                                  item.channel_name,
+                                  item.out_group_id,
+                                  item.out_channel_id,
+                                  oauthSid
+                                )
+                                .map(data => {
+                                  if (data.errcode != 0) {
+                                    throw new Exception(data.errmsg)
+                                  }
+                                  data.data.sequence_data_list.head.point_list
+                                    .map(dataItem => {
+                                      ChannelModel.ApiCSVData(
+                                        item.channel_name,
+                                        appid,
+                                        dataItem.label,
+                                        registerOrActive.stat_type == 1000091,
+                                        dataItem.value
+                                          .getOrElse(0)
+                                      )
+                                    })
+                                })
+                            })
+                            .mapConcat(identity)
+                            .recoverWithRetries(
+                              1,
+                              {
+                                case e => {
+                                  e.printStackTrace()
+                                  dataStore.actor.foreach(
+                                    _.tell(
+                                      HandleResponse(
+                                        game = appid.mkString(" "),
+                                        process = false,
+                                        success = false,
+                                        delay = Option.empty
+                                      )
+                                    )
+                                  )
+                                  Source.empty[ChannelModel.ApiCSVData]
+                                }
+                              }
+                            )
+                            .watchTermination()((fp, f) => {
+                              f.foreach(_ => {
+                                dataStore.actor.foreach(
+                                  _.tell(
+                                    HandleResponse(
+                                      game = appid.mkString(" "),
+                                      process = false,
+                                      success = true,
+                                      delay = Option(
+                                        java.time.Duration
+                                          .between(
+                                            beginTime,
+                                            LocalDateTime.now()
+                                          )
+                                          .getSeconds
+                                      )
+                                    )
+                                  )
+                                )
+                              })
+                              fp
+                            })
                         })
-                        .mapConcat(identity)
                         .fold(Seq[ChannelModel.ApiCSVData]())(_ ++ Seq(_))
                         .flatMapConcat(list => {
                           dataStore.actor.foreach(
@@ -355,6 +385,19 @@ object ChannelBehavior extends BaseRouter {
                               _ ++ Seq(_)
                             )
                             .map(mergeData => {
+                              dataStore.actor.foreach(
+                                _.tell(
+                                  MergeFinish
+                                )
+                              )
+                              logger.info(
+                                "合并处理耗时：{}秒、总行数为：{}",
+                                java.time.Duration
+                                  .between(mergeBeginTime, LocalDateTime.now())
+                                  .getSeconds,
+                                mergeData.size
+                              )
+
                               val fileBeginTime: LocalDateTime =
                                 LocalDateTime.now()
                               val book = new HSSFWorkbook()
