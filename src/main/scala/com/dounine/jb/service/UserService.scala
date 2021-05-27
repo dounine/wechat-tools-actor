@@ -22,7 +22,7 @@ class UserService(system: ActorSystem[_]) extends BaseRouter with EnumMapper {
 
   private implicit val ec: ExecutionContextExecutor = system.executionContext
   private val logger: Logger = LoggerFactory.getLogger(classOf[UserService])
-  private val db: MySQLProfile.backend.DatabaseDef = DataSource.db
+  private lazy val db: MySQLProfile.backend.DatabaseDef = DataSource.db
   private val dict: TableQuery[UserTable] = TableQuery[UserTable]
   private val jwtSecret: String = config.getString("jwt.secret")
 

@@ -30,9 +30,9 @@ object DataSource extends BaseRouter{
     c
   }
   val poolSize: Int = config.getInt("db.hikaricp.maximumPoolSize")
-  val dataSource: HikariDataSource = new HikariDataSource(hikariConfig)
+  lazy val dataSource: HikariDataSource = new HikariDataSource(hikariConfig)
 
-  val db: MySQLProfile.backend.DatabaseDef = {
+  lazy val db: MySQLProfile.backend.DatabaseDef = {
     logger.info("HikariDataSource init")
     val asyncExecutor: AsyncExecutor = AsyncExecutor(
       name = "CorePostgresDriver.AsyncExecutor",

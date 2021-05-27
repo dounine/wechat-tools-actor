@@ -86,11 +86,11 @@ object Bootstrap extends BaseRouter {
     implicit val executionContext: ExecutionContextExecutor =
       system.executionContext
 
-    if (config.getString("model") == "dev") {
-      val persistenerService =
-        SingletonService.instance(classOf[AkkaPersistenerService], system)
-      Await.result(persistenerService.deleteAll(), Duration.Inf)
-    }
+//    if (config.getString("model") == "dev") {
+//      val persistenerService =
+//        SingletonService.instance(classOf[AkkaPersistenerService], system)
+//      Await.result(persistenerService.deleteAll(), Duration.Inf)
+//    }
 
     val route: Route = Route.seal(
       concat(

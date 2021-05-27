@@ -1,20 +1,20 @@
 package com.dounine.jb.service
 
+import akka.NotUsed
+
 import java.io.File
 import java.net.URLEncoder
 import java.time.{LocalDate, ZoneOffset}
-
 import akka.actor.typed.ActorSystem
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, HttpResponse}
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.http.scaladsl.{Http, HttpExt}
 import akka.stream.{OverflowStrategy, SystemMaterializer}
-import akka.stream.scaladsl.FileIO
+import akka.stream.scaladsl.{FileIO, Source}
 import com.dounine.jb.model.ChannelModel
 import com.dounine.jb.store.UserTable
 import com.dounine.jb.tools.akka.ProxySetting
-import com.dounine.jb.tools.db.DataSource
 import com.dounine.jb.tools.json.{BaseRouter, EnumMapper}
 import org.slf4j.{Logger, LoggerFactory}
 import slick.jdbc.MySQLProfile
@@ -31,11 +31,10 @@ class ChannelService(system: ActorSystem[_])
   private implicit val materializer = SystemMaterializer(system).materializer
   private val http: HttpExt = Http(system)
 
-  def uuid(): Future[ChannelModel.ApiScanLoginResponse] = {
+  def uuid(): Source[String, NotUsed] = Source.future({
     val urlPath =
       "https://open.weixin.qq.com/connect/qrconnect?appid=wxd3b2f88404faa210&scope=snsapi_login&redirect_uri=https%3A%2F%2Fgame.weixin.qq.com%2Fcgi-bin%2Fminigame%2Fstatic%2Fchannel_side%2Flogin.html%3F&state=&login_type=jssdk&self_redirect=default&styletype=&sizetype=&bgcolor=&rst"
-
-    val responseFuture = http
+    http
       .singleRequest(
         request = HttpRequest(
           uri = s"$urlPath",
@@ -43,32 +42,27 @@ class ChannelService(system: ActorSystem[_])
         ),
         settings = ProxySetting.proxy(system)
       )
-    responseFuture.flatMap {
-      case HttpResponse(_, headers, entity, _) =>
-        try {
-          Unmarshaller
-            .stringUnmarshaller(entity)
-            .map(html => {
-              html
-                .split("\n")
-                .find(line => {
-                  line.contains("""<img class="qrcode-image""")
-                })
-                .get
-            })
-            .map(uuid => {
-              ChannelModel.ApiScanLoginResponse(
-                uuid.split("""src="""").last.split(""""""").head
-              )
-            })
-        } catch {
-          case e => Future.failed(new Exception(e.getMessage))
-        }
-      case msg @ _ =>
-        logger.error(s"请求失败 $msg")
-        Future.failed(new Exception(s"请求失败 $msg"))
-    }
-  }
+      .flatMap {
+        case HttpResponse(_, headers, entity, _) =>
+          try {
+            Unmarshaller
+              .stringUnmarshaller(entity)
+              .map(html => {
+                html
+                  .split("\n")
+                  .find(line => {
+                    line.contains("""<img class="qrcode-image""")
+                  })
+                  .get
+              })
+              .map(_.split("""src="""").last.split(""""""").head)
+          } catch {
+            case e => Future.failed(new Exception(e.getMessage))
+          }
+        case msg @ _ =>
+          Future.failed(new Exception(s"请求失败 $msg"))
+      }
+  })
 
   def qrcode(uuid: String): Future[File] = {
     logger.info("qrcode uuid -> {}", uuid)
