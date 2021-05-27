@@ -186,6 +186,7 @@ object ChannelBehavior extends BaseRouter {
                         .map(_.split(" "))
                         .sliding(2)
                         .map(tp2 => {
+                          logger.info("proessing -> {}", tp2.head)
                           dataStore.actor.foreach(
                             _.tell(
                               HandleResponse(
@@ -214,17 +215,15 @@ object ChannelBehavior extends BaseRouter {
                               appid.head.trim,
                               oauthSid
                             )
-                            .map(data =>
-                              {
-                                data.data.share_perm_data.perm_list
-                                  .map(i =>
-                                    Tuple2[ChannelModel.PermItem, APPID](
-                                      i,
-                                      appid.head
-                                    )
+                            .map(data => {
+                              data.data.share_perm_data.perm_list
+                                .map(i =>
+                                  Tuple2[ChannelModel.PermItem, APPID](
+                                    i,
+                                    appid.head
                                   )
-                              }
-                            )
+                                )
+                            })
                         })
                         .mapConcat(identity)
                         .map(item => {
@@ -239,7 +238,8 @@ object ChannelBehavior extends BaseRouter {
                           )
                         })
                         .mapConcat(identity)
-                        .mapAsync(4)(tp3 => {
+                        .throttle(1, 500.milliseconds)
+                        .mapAsync(1)(tp3 => {
                           val appid = tp3._3
                           val registerOrActive = tp3._2
                           val item = tp3._1
@@ -255,6 +255,9 @@ object ChannelBehavior extends BaseRouter {
                               oauthSid
                             )
                             .map(data => {
+                              if (data.errcode != 0) {
+                                throw new Exception(data.errmsg)
+                              }
                               data.data.sequence_data_list.head.point_list
                                 .map(dataItem => {
                                   ChannelModel.ApiCSVData(
@@ -403,8 +406,11 @@ object ChannelBehavior extends BaseRouter {
                     }
                   }
                   .map(Right.apply)
-                  .recover { case e =>
-                    Left(e)
+                  .recover {
+                    case e => {
+                      e.printStackTrace()
+                      Left(e)
+                    }
                   }
 
                 val graph = RunnableGraph.fromGraph(GraphDSL.create() {
