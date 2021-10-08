@@ -16,7 +16,7 @@ sourceSets {
         }
     }
 }
-task copyJars(type:Copy) {
+task copyJars(type: Copy) {
     from configurations.runtime
     into new File('build/libs/jars')
 }
@@ -28,7 +28,7 @@ jar {
     manifest {
         attributes(
                 'Main-Class': 'com.dounine.jb.Bootstrap',
-                "Class-Path": new File(buildDir+'/libs/jars').list().collect { "jars/${it}" }.join(" ")
+                "Class-Path": new File(buildDir + '/libs/jars').list().collect { "jars/${it}" }.join(" ")
         )
     }
 }
@@ -41,7 +41,7 @@ task docker(type: Docker) {
     applicationName = jar.baseName
     tagVersion = jar.version
     volume('/tmp')
-    addFile("jars" , "jars")
+    addFile("jars", "jars")
     addFile("${jar.baseName}-${jar.version}.jar", "app.jar")
     //两种entryPoint 都可以使用
     entryPoint(["java", "-cp", "/jars/*:/app.jar", "${mainClassName}"])
@@ -92,7 +92,7 @@ dependencies {
     compile group: 'com.typesafe.akka', name: 'akka-stream_2.13', version: akka
     compile group: 'com.typesafe.akka', name: 'akka-cluster-typed_2.13', version: akka
     compile group: 'com.typesafe.akka', name: 'akka-cluster-sharding-typed_2.13', version: akka
-    compile group: 'com.typesafe.akka', name: 'akka-actor-typed_2.13', version:akka
+    compile group: 'com.typesafe.akka', name: 'akka-actor-typed_2.13', version: akka
     compile group: 'com.typesafe.akka', name: 'akka-cluster-metrics_2.13', version: akka
     compile group: 'com.typesafe.akka', name: 'akka-cluster_2.13', version: akka
     compile group: 'com.typesafe.akka', name: 'akka-persistence-query_2.13', version: akka
@@ -100,6 +100,7 @@ dependencies {
     compile group: 'com.typesafe.akka', name: 'akka-discovery_2.13', version: akka
     compile group: 'com.lightbend.akka', name: 'akka-persistence-jdbc_2.13', version: '4.0.0'
     compile group: 'com.typesafe.akka', name: 'akka-cluster-tools_2.13', version: akka
+    compile group: 'org.fusesource.leveldbjni', name: 'leveldbjni-all', version: '1.8'
     compile group: 'com.lightbend.akka.management', name: 'akka-lease-kubernetes_2.13', version: '1.0.9'
     compile group: 'com.lightbend.akka.management', name: 'akka-management-cluster-http_2.13', version: '1.0.9'
     compile group: 'com.lightbend.akka.discovery', name: 'akka-discovery-kubernetes-api_2.13', version: '1.0.9'

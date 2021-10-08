@@ -44,6 +44,7 @@ lazy val app = (project in file("."))
       "org.json4s" %% "json4s-jackson" % json4sVersion,
       "org.json4s" %% "json4s-native" % json4sVersion,
       "org.json4s" %% "json4s-ext" % json4sVersion,
+      "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8",
       "net.lightbody.bmp" % "browsermob-proxy" % "2.1.5" pomOnly (),
       "org.seleniumhq.selenium" % "selenium-java" % "4.0.0-alpha-7",
       "org.apache.poi" % "poi" % "4.1.2",
