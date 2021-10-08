@@ -40,7 +40,7 @@ import com.dounine.jb.behavior.selenium.ChannelBehavior
 object ChannelWebsocketBehavior extends BaseRouter {
 
   val typeKey: EntityTypeKey[BaseSerializer] =
-    EntityTypeKey[BaseSerializer](s"ChannelWebsocketBehavior")
+    EntityTypeKey[BaseSerializer](s"ChannelWebsocketBehavior2")
 
   trait Event extends BaseSerializer
 
@@ -92,6 +92,7 @@ object ChannelWebsocketBehavior extends BaseRouter {
           context.log.info("channel websocket behavior create")
           val sharding: ClusterSharding = ClusterSharding(context.system)
           val logOn: Boolean = config.getBoolean("log.websocket")
+
           val commandHandler
               : (State, BaseSerializer) => Effect[BaseSerializer, State] = {
             (state, cmd) =>
@@ -335,7 +336,7 @@ object ChannelWebsocketBehavior extends BaseRouter {
               if (logOn) context.log.info(s"******  PreRestart  ******")
             case (_, single) =>
               if (logOn) context.log.debug(s"******  其它事件 ${single}  ******")
-          }).snapshotWhen((state, event, _) => true)
+          }).snapshotWhen((state, event, _) => false)
             .withRetention(
               RetentionCriteria
                 .snapshotEvery(numberOfEvents = 100, keepNSnapshots = 2)

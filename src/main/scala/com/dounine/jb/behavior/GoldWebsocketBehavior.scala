@@ -36,7 +36,7 @@ import java.util.UUID
 object GoldWebsocketBehavior extends BaseRouter {
 
   val typeKey: EntityTypeKey[BaseSerializer] =
-    EntityTypeKey[BaseSerializer](s"GoldWebsocketBehavior")
+    EntityTypeKey[BaseSerializer](s"GoldWebsocketBehavior2")
 
   trait Event extends BaseSerializer
 
@@ -289,7 +289,7 @@ object GoldWebsocketBehavior extends BaseRouter {
               if (logOn) context.log.info(s"******  PreRestart  ******")
             case (_, single) =>
               if (logOn) context.log.debug(s"******  其它事件 ${single}  ******")
-          }).snapshotWhen((state, event, _) => true)
+          }).snapshotWhen((state, event, _) => false)
             .withRetention(
               RetentionCriteria
                 .snapshotEvery(numberOfEvents = 100, keepNSnapshots = 2)
