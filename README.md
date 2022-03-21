@@ -26,6 +26,8 @@ sbt clean docker:publishLocal -Denv=prod
 运行
 ```shell
 docker run --rm -ti wechat-tools-actor:0.1.0-SNAPSHOT
+#或
+docker run --rm -d -p 50001:8080 -v /etc/localtime:/etc/localtime --name wechat-tools-actor com.dounine.jb/wechat-tools-actor:1.0.0
 ```
 sbt下载依赖包慢
 ```
