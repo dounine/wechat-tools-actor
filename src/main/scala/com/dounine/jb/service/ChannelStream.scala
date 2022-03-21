@@ -45,7 +45,7 @@ object ChannelStream extends BaseRouter {
                 html
                   .split("\n")
                   .find(line => {
-                    line.contains("""<img class="qrcode-image""")
+                    line.contains("""<img class="web_qrcode_img""")
                   })
                   .get
               })
